@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "Arduino.h"
+
 #define BUILDER_ASCII_NUM_TO_HEX(NUM) \
 ( \
     RANGE(0x30, NUM, 0x39) ? ((uint8_t)(NUM) - 0x30) : (uint8_t)0x00 \
@@ -77,10 +79,18 @@
     BUILDER_DAY,          \
     BUILDER_HOUR,         \
     BUILDER_MINUTE,       \
-    BUILDER_SECOND        \
+    BUILDER_SECOND        
 
-#define BUILDER_RELEASE   0
+class BUILDER {
+public:
+    BUILDER(uint32_t major, uint32_t minor, uint32_t patch, uint32_t build);
+    ~BUILDER();
 
-#define BUILDER_VERSION_FMW(Major, Minor, Patch, Build)    (((Major##uL) << 24) | ((Minor##uL) << 16) | ((Patch##uL) << 8) | (Build##uL))
+    uint32_t versionToNumber(void);
+    char* versionToString(void);
+
+private:
+    uint32_t version;
+};
 
 #endif // _BUILDER_H_
