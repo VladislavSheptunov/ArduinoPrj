@@ -1,6 +1,14 @@
-#include "hms.h"
+#include "./hms/hms.h"
 
 HMS hms;
+
+void ISR_leftButton() {
+    hms.updateLeftButton();
+}
+
+void ISR_rightButton() {
+    hms.updateRightButton();
+}
 
 void setup() {
     hms.init();
@@ -17,12 +25,4 @@ void loop() {
 
     delay(300);
     hms.show();
-}
-
-void ISR_leftButton() {
-    hms.updateLeftButton();
-}
-
-void ISR_rightButton() {
-    hms.updateRightButton();
 }

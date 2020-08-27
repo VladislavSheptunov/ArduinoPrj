@@ -12,7 +12,7 @@ BUILDER::~BUILDER() {
 }
 
 uint32_t BUILDER::versionToNumber() {
-    this->version;
+    return this->version;
 }
 
 char* BUILDER::versionToString() {
