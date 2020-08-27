@@ -2,13 +2,8 @@
 
 HMS hms;
 
-void ISR_leftButton() {
-    hms.updateLeftButton();
-}
-
-void ISR_rightButton() {
-    hms.updateRightButton();
-}
+void ISR_leftButton();
+void ISR_rightButton();
 
 void setup() {
     hms.init();
@@ -23,6 +18,14 @@ void loop() {
     hms.updateTemperature();
     hms.updateHumidity();
 
-    delay(300);
+    delay(100);
     hms.show();
+}
+
+void ISR_leftButton() {
+    hms.updateLeftButton();
+}
+
+void ISR_rightButton() {
+    hms.updateRightButton();
 }

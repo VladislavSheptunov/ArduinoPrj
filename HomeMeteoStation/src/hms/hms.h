@@ -3,7 +3,6 @@
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-#include <stdio.h>  // FOR debug
 
 #include "../builder/builder.h"
 #include "../memory/memory.h"
@@ -14,32 +13,45 @@
 #include "../button/button.h"
 #include "../timer/timer.h"
 
-#define HMS_NORMAL_TEMPERATURE  (24.0)
-#define HMS_NORMAL_HUMIDITY     (50.0)
-#define HMS_MENU_ITEMS          (2)
+#define HMS_NORMAL_TEMPERATURE             (24.0)
+#define HMS_NORMAL_DIV_IN_PER_TEMPERATURE  (10)
+
+#define HMS_NORMAL_HUMIDITY                (50.0)
+#define HMS_NORMAL_DIV_IN_PER_HUMIDITY     (20)
+
+#define HMS_COUNT_DIVIATION     (90)
+#define HMS_COUNT_ALARM         (11)
 
 class HMS {
   public:
-    enum HMSPin {
-      HMS_PIN_RESERVED_0   = 0x00,
-      HMS_PIN_RESERVED_1   = 0x01,
+    enum Pin : int {
+      PIN_RESERVED_0   = 0,
+      PIN_RESERVED_1   = 1,
 
-      HMS_PIN_DHT_DAT      = 0x08,
+      PIN_DHT_DAT      = 8,
 
-      HMS_PIN_DIOD_LEFT    = 0x09,
-      HMS_PIN_DIOD_RIGHT   = 0x04,
+      PIN_DIOD_LEFT    = 9,
+      PIN_DIOD_RIGHT   = 4,
 
-      HMS_PIN_DS1302_RST   = 0x05,
-      HMS_PIN_DS1302_DAT   = 0x06,
-      HMS_PIN_DS1302_CLK   = 0x07,
+      PIN_DS1302_RST   = 5,
+      PIN_DS1302_DAT   = 6,
+      PIN_DS1302_CLK   = 7,
 
-      HMS_PIN_BUTTON_LEFT  = 0x02,
-      HMS_PIN_BUTTON_RIGHT = 0x03,
+      PIN_BUTTON_LEFT  = 2,
+      PIN_BUTTON_RIGHT = 3,
 
-      HMS_PIN_RESERVED_10  = 0x10,
-      HMS_PIN_RESERVED_11  = 0x11,
-      HMS_PIN_RESERVED_12  = 0x12,
-      HMS_PIN_RESERVED_13  = 0x13,
+      PIN_RESERVED_10  = 10,
+      PIN_RESERVED_11  = 11,
+      PIN_RESERVED_12  = 12,
+      PIN_RESERVED_13  = 13,
+    };
+
+    enum Menu : int {
+        MENU_GENERAL = 0,
+        MENU_PARAM   = 1,
+        MENU_ABOUT   = 2,
+
+        MENU_COUNT
     };
 
     HMS();
@@ -58,11 +70,8 @@ class HMS {
     void updateRightButton();
 
     void setControlOnTemperature(uint8_t diviation);
-    bool isDivOnNormalTemperature(void);
-    
     void setControlOnHumidity(uint8_t diviation);
-    bool isDivOnNormalHumidity(void);
-
+  
   private:
     BUILDER *builder;
 
@@ -79,16 +88,19 @@ class HMS {
     DateTime dateTime;
 
     float    temperature;
-    uint8_t  temperatureDiv;
+    float    temperatureDiv;
 
-    uint8_t  humidity;
-    uint8_t  humidityDiv;
+    float    humidity;
+    float    humidityDiv;
 
     uint8_t numMenu;
     TIMER   *timerMenu;
 
     void nextMenu(void);
     void previousMenu(void);
+
+    void checkDivOnNormalTemperature(void);
+    void checkDivOnNormalHumidity(void);
 };
 
 #endif // _HOME_METEO_STATION_H_

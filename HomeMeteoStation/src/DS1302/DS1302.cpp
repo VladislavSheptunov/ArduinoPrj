@@ -102,7 +102,7 @@ DateTime& DateTime::operator=(const DateTime &dateTime) {
 }
 
 char * DateTime::toString() {
-  static char templateStr[] = "hh.mm.ss Day dd.mm.yy";
+  static char templateStr[] = "hh:mm:ss Day dd.mm.yy";
   char *dayWeek = templateStr + 9;
 
   // In ASCII Code
