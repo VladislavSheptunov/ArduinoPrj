@@ -5,14 +5,14 @@
 #include <LiquidCrystal_I2C.h>
 #include <stdio.h>  // FOR debug
 
-#include "builder.h"
-#include "memory.h"
+#include "../builder/builder.h"
+#include "../memory/memory.h"
 
-#include "DS1302.h"
+#include "../DS1302/DS1302.h"
 #include "DHT.h"
-#include "led.h"
-#include "button.h"
-#include "timer.h"
+#include "../led/led.h"
+#include "../button/button.h"
+#include "../timer/timer.h"
 
 #define HMS_NORMAL_TEMPERATURE  (24.0)
 #define HMS_NORMAL_HUMIDITY     (50.0)

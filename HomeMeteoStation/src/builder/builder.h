@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-#include "Arduino.h"
-
 #define BUILDER_ASCII_NUM_TO_HEX(NUM) \
 ( \
     RANGE(0x30, NUM, 0x39) ? ((uint8_t)(NUM) - 0x30) : (uint8_t)0x00 \

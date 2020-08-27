@@ -18,7 +18,8 @@ HMS::HMS() {
     this->leftButton  = new BUTTON(HMS_PIN_BUTTON_LEFT);
     this->rightButton = new BUTTON(HMS_PIN_BUTTON_RIGHT);
 
-    this->timerMenu   = new TIMER(TIMER::TIMER_INTERVAL_MIN);
+    //this->timerMenu   = new TIMER(TIMER::TIMER_INTERVAL_MIN);
+    this->timerMenu   = new TIMER(5000);
 
     this->setControlOnTemperature(10);
     this->setControlOnHumidity(20);
