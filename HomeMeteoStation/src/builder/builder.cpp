@@ -16,17 +16,17 @@ uint32_t BUILDER::versionToNumber() {
 }
 
 char* BUILDER::versionToString() {
-    static char templateStr[] = "m.mi.ph";
+    static char templateStr[] = "m.m.p";
 
     // In ASCII Code
     //templateStr[0]  = 0x30 + (((this->version >> 24) & 0xFF) / 10);
     templateStr[0]  = 0x30 + (((this->version >> 24) & 0xFF) % 10);
 
-    templateStr[2]  = 0x30 + (((this->version >> 16) & 0xFF) / 10);
-    templateStr[3]  = 0x30 + (((this->version >> 16) & 0xFF) % 10);
+    //templateStr[2]  = 0x30 + (((this->version >> 16) & 0xFF) / 10);
+    templateStr[2]  = 0x30 + (((this->version >> 16) & 0xFF) % 10);
 
-    templateStr[5]  = 0x30 + (((this->version >> 8) & 0xFF)  / 10);
-    templateStr[6]  = 0x30 + (((this->version >> 8) & 0xFF)  % 10);
+    //templateStr[5]  = 0x30 + (((this->version >> 8) & 0xFF)  / 10);
+    templateStr[4]  = 0x30 + (((this->version >> 8) & 0xFF)  % 10);
 
     return templateStr;
 }

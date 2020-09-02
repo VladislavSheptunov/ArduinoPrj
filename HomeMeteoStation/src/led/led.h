@@ -16,6 +16,7 @@ public:
 
 private:
     uint8_t pin;
+    bool state;
 };
 
 #endif // _LED_H_
