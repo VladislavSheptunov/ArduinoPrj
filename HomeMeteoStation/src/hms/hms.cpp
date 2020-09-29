@@ -7,9 +7,14 @@
 //Serial.println("Test");
 
 HMS::HMS() {
-    this->builder     = new BUILDER(0, 0, 2, 0);
+    this->temperature = 0.0;
+    this->humidity    = 0;
+    
+    this->menu        = {0};
 
-    this->lcd         = new LiquidCrystal_I2C(0x27, 16, 2);
+    this->builder     = new BUILDER(0, 0, 3, 0);
+
+    this->lcd         = new LCD1602(0x27, 16, 2);
     this->rtc         = new DS1302(HMS::PIN_DS1302_RST, HMS::PIN_DS1302_DAT, HMS::PIN_DS1302_CLK);
     this->dht         = new DHT(HMS::PIN_DHT_DAT, DHT11);
 
@@ -19,12 +24,7 @@ HMS::HMS() {
     this->leftButton  = new BUTTON(HMS::PIN_BUTTON_LEFT);
     this->rightButton = new BUTTON(HMS::PIN_BUTTON_RIGHT);
 
-    this->timerMenu   = new TIMER(10000);
-
-    this->temperature = 0.0;
-    this->humidity    = 0;
-    
-    this->numMenu     = 0;
+    this->timerMenu   = new TIMER(this->menu.displayTime = 10000);
 }
 
 HMS::~HMS() {
@@ -44,7 +44,7 @@ HMS::~HMS() {
 }
 
 void HMS::init() {
-    this->lcd->init();
+    this->lcd->startup();
 
     this->rtc->writeProtect(false);
     this->rtc->halt(false);
@@ -53,51 +53,132 @@ void HMS::init() {
     DateTime dateTimeBuild = { BUILDER_DATE_TIME_INVERSE, DateTime::DAY_WEDNESDAY };
     uint32_t hash = dateTimeBuild.hour * 60 * 60 + dateTimeBuild.min * 60 + dateTimeBuild.sec;
 
-    if (hash != MEM_readUint32(0)) {
+    this->menu.displayTime = MEM_readUint32(MEM_DISPLAY_TIME);
+    this->backlight        = MEM_readUint8(MEM_BACKLIGHT);
+
+    if (hash != MEM_readUint32(MEM_INIT_FLAG)) {
         MEM_writeUint32(0, hash);
         this->rtc->setDateTime(dateTimeBuild);
-    }
-}
 
-void HMS::enableBacklight(bool flag) {
-    this->lcd->setBacklight(flag);
+        this->menu.displayTime = 5000;
+        this->backlight        = 50;
+
+        MEM_writeUint32(MEM_DISPLAY_TIME, this->menu.displayTime);
+        MEM_writeUint8(MEM_BACKLIGHT, this->backlight);
+    }
+
+    delay(500);
 }
 
 void HMS::show() {
-    switch (this->numMenu) {
+    switch (this->menu.number) {
         case MENU_GENERAL: {
-            // -- Temperature
+            if (this->menu.isCapture) {
+                DateTime oldDateTime = this->dateTime;
+
+                if (this->rightButton->state()) {
+                    this->menu.ptrChgGeneral = (this->menu.ptrChgGeneral < 4) ? this->menu.ptrChgGeneral + 1 : 0;
+                }
+
+                switch (this->menu.ptrChgGeneral) {
+                    case 0: {
+                        lcd->setCursor(1, 1);
+                        if (!this->rightButton->state() && this->leftButton->state()) {
+                            this->dateTime.hour = (this->dateTime.hour < 23) ? this->dateTime.hour + 1 : 0;
+                        }
+                        
+                        break;
+                    }
+                    case 1: {
+                        lcd->setCursor(4, 1);
+                        if (!this->rightButton->state() && this->leftButton->state()) {
+                            this->dateTime.min = (this->dateTime.min < 59) ? this->dateTime.min + 1 : 0;
+                        }
+
+                        break;
+                    }
+                    case 2: {
+                        lcd->setCursor(7, 1);
+                        if (!this->rightButton->state() && this->leftButton->state()) {
+                            this->dateTime.date = (this->dateTime.date < 31) ? this->dateTime.date + 1 : 1;
+                        }
+
+                        break;
+                    }
+                    case 3: {
+                        lcd->setCursor(10, 1);
+                        if (!this->rightButton->state() && this->leftButton->state()) {
+                            this->dateTime.mon = (this->dateTime.mon < 12) ? this->dateTime.mon + 1 : 1;
+                        }
+
+                        break;
+                    }
+                    case 4: {
+                        lcd->setCursor(13, 1);
+                        if (!this->rightButton->state() && this->leftButton->state()) {
+                            this->dateTime.year = (this->dateTime.year < 30) ? this->dateTime.year + 1 : 20;
+                        }
+      
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
+                }
+
+                if (oldDateTime != this->dateTime) {
+                    this->dateTime.sec = 0;
+                    this->rtc->setDateTime(this->dateTime);
+                }
+
+                lcd->print("__");
+                delay(50);
+            }
+
+            // --- Measured value
             lcd->setCursor(0, 0);
+
+            // -- Temperature
             lcd->print(SIGN_FLOAT(this->temperature));
-            lcd->setCursor(1, 0);
             lcd->print(abs(this->temperature), 1);
             lcd->print("t ");
 
             // -- Humidity
-            lcd->setCursor(0, 1);
             lcd->print((uint8_t)this->humidity);
             lcd->print("% ");
 
-            // -- Date and Time
-            lcd->setCursor(7, 0);
-            lcd->print(this->dateTime.toString());
-            lcd->setCursor(4, 1);
-            lcd->print(this->dateTime.toString() + 9);
+            // -- Pressure
+            lcd->print((uint16_t)this->pressure);
+            lcd->print("mH");
+            // ---
+
+            // --- Date and Time
+            lcd->setCursor(0, 1);
+            lcd->print(" ");
+            lcd->print(this->dateTime.toStringTime());
+            lcd->print(" ");
+            lcd->print(this->dateTime.toStringDate());
+            lcd->print(" ");
+            // ---
 
             break;
         }
-        case MENU_PARAM: {
-            // -- Temperature Diviation
+        case MENU_DIVIATION: {
             lcd->setCursor(0, 0);
-            lcd->print("DeviationT: ");
+            lcd->print("   Deviation:   ");
+
+            lcd->setCursor(0, 1);
+            lcd->print("  ");
+
+            // -- Temperature
             lcd->print(SIGN_FLOAT(this->temperatureDiv));
             lcd->print(abs(this->temperatureDiv), 1);
+            lcd->print("t ");
 
-            // -- Humidity Diviation
-            lcd->setCursor(0, 1);
-            lcd->print("DeviationH: ");
+            // -- Humidity
             lcd->print(SIGN_FLOAT(this->humidityDiv));
             lcd->print(abs(this->humidityDiv), 1);
+            lcd->print("%   ");
 
             break;
         }
@@ -114,15 +195,83 @@ void HMS::show() {
 
             break;
         }
+        case MENU_PARAM: {
+            if (this->menu.isCapture) {
+                    uint8_t  oldBacklight   = this->backlight;
+                    uint32_t oldDisplayTime = this->menu.displayTime;
+
+                if (this->rightButton->state()) {
+                    this->menu.ptrChgParam = (this->menu.ptrChgParam < 1) ? this->menu.ptrChgParam + 1 : 0;
+                }
+
+                switch (this->menu.ptrChgParam) {
+                    case 0: {
+                        lcd->setCursor(13, 0);
+                        if (!this->rightButton->state() && this->leftButton->state()) {
+                            this->backlight = (this->backlight < 100) ? this->backlight + 5 : 0;
+                        }
+
+                        break;
+                    }
+                    case 1: {
+                        lcd->setCursor(13, 1);
+                        if (!this->rightButton->state() && this->leftButton->state()) {
+                            this->menu.displayTime = (this->menu.displayTime < 60000) ? this->menu.displayTime + 1000 : 1000;
+                        }
+
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
+                }
+
+                if (oldBacklight != this->backlight) {
+                    MEM_writeUint8(MEM_BACKLIGHT, this->backlight);
+                }
+
+                if (oldDisplayTime != this->menu.displayTime) {
+                    MEM_writeUint32(MEM_DISPLAY_TIME, this->menu.displayTime);
+
+                    this->timerMenu->changeInterval(this->menu.displayTime);
+                    this->timerMenu->start();
+                }
+
+                lcd->print("__");
+                delay(50);
+            }
+
+            lcd->setCursor(0, 0);
+            lcd->print("Backlight:   ");
+
+            if (this->backlight < 10) {
+                lcd->print("0");
+            }
+
+            (this->backlight > 99) ? lcd->print(99) : lcd->print(this->backlight);
+            lcd->print("%");
+
+            lcd->setCursor(0, 1);
+            lcd->print("DisplayTime: ");
+
+            if ((this->menu.displayTime / 1000) < 10) {
+                lcd->print("0");
+            }
+
+            lcd->print(this->menu.displayTime / 1000);
+            lcd->print("s");
+
+            break;
+        }
         default: {
-            this->numMenu = 0;
+            this->menu.number = 0;
             return;
         }
     }
 
-    if (this->timerMenu->isExpired()) {
+    if (this->timerMenu->isExpired() && !this->menu.isCapture) {
         this->timerMenu->stop();
-        this->numMenu = 0;
+        this->menu.number = 0;
     }
 }
 
@@ -177,6 +326,31 @@ void HMS::updateHumidity() {
     this->checkDivOnNormalHumidity();
 }
 
+void HMS::updatePressure() {
+    this->pressure = 760.0;
+}
+
+void HMS::updateBacklight() {
+    uint8_t light = this->backlight;
+
+    light = map(light, 0, 100, 0, 255);
+    analogWrite(HMS::PIN_BACKLIGHT, light);
+}
+
+void HMS::updateConfiguration(void) {
+    if (this->leftButton->state() && this->rightButton->state()) {
+        this->menu.isCapture = !this->menu.isCapture;
+
+        if (!this->menu.isCapture) {
+            this->menu.number        = 0;
+            this->menu.ptrChgGeneral = 0;
+            this->menu.ptrChgParam   = 0;
+        }
+
+        delay(500);
+    }
+}
+
 void HMS::updateLeftButton() {
     if (this->leftButton->state()) {
         this->previousMenu();
@@ -196,22 +370,30 @@ void HMS::updateRightButton() {
 }
 
 void HMS::nextMenu() {
-    if (HMS::MENU_COUNT <= this->numMenu) {
-        this->numMenu = 0;
+    if (this->menu.isCapture) {
         return;
     }
 
-    this->numMenu++;
+    if (HMS::MENU_COUNT <= this->menu.number) {
+        this->menu.number = 0;
+        return;
+    }
+
+    this->menu.number++;
     this->timerMenu->start();
 }
 
 void HMS::previousMenu() {
-    if (!this->numMenu) {
-        this->numMenu = HMS::MENU_COUNT - 1;
+    if (this->menu.isCapture) {
         return;
     }
 
-    this->numMenu--;
+    if (!this->menu.number) {
+        this->menu.number = HMS::MENU_COUNT - 1;
+        return;
+    }
+
+    this->menu.number--;
     this->timerMenu->start();
 }
 

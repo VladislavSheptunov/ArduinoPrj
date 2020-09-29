@@ -1,13 +1,12 @@
 #ifndef _HOME_METEO_STATION_H_
 #define _HOME_METEO_STATION_H_
 
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
-
 #include "../builder/builder.h"
 #include "../memory/memory.h"
 
 #include "../DS1302/DS1302.h"
+#include "../LCD1602/LCD1602.h"
+
 #include "DHT.h"
 #include "../led/led.h"
 #include "../button/button.h"
@@ -24,32 +23,33 @@
 
 class HMS {
   public:
-    enum Pin : int {
-      PIN_RESERVED_0   = 0,
-      PIN_RESERVED_1   = 1,
+    enum DigitalPin : int {
+      PIN_RESERVED_0    = 0,
+      PIN_RESERVED_1    = 1,
 
-      PIN_DHT_DAT      = 8,
+      PIN_DHT_DAT       = 8,
 
-      PIN_DIOD_LEFT    = 9,
-      PIN_DIOD_RIGHT   = 4,
+      PIN_DIOD_LEFT     = 9,
+      PIN_DIOD_RIGHT    = 4,
 
-      PIN_DS1302_RST   = 5,
-      PIN_DS1302_DAT   = 6,
-      PIN_DS1302_CLK   = 7,
+      PIN_DS1302_RST    = 5,
+      PIN_DS1302_DAT    = 6,
+      PIN_DS1302_CLK    = 7,
 
-      PIN_BUTTON_LEFT  = 2,
-      PIN_BUTTON_RIGHT = 3,
+      PIN_BUTTON_LEFT   = 2,
+      PIN_BUTTON_RIGHT  = 3,
 
-      PIN_RESERVED_10  = 10,
-      PIN_RESERVED_11  = 11,
-      PIN_RESERVED_12  = 12,
-      PIN_RESERVED_13  = 13,
+      PIN_RESERVED_10   = 10,
+      PIN_BACKLIGHT     = 11,
+      PIN_RESERVED_12   = 12,
+      PIN_RESERVED_13   = 13,
     };
 
     enum Menu : int {
-        MENU_GENERAL = 0,
-        MENU_PARAM   = 1,
-        MENU_ABOUT   = 2,
+        MENU_GENERAL     = 0,
+        MENU_DIVIATION   = 1,
+        MENU_PARAM       = 2,
+        MENU_ABOUT       = 3,
 
         MENU_COUNT
     };
@@ -59,12 +59,16 @@ class HMS {
 
     void init(void);
 
-    void enableBacklight(bool flag);
     void show(void);
 
     void updateDateTime(void);
     void updateTemperature(void);
     void updateHumidity(void);
+    void updatePressure(void);
+
+    void updateBacklight(void);
+
+    void updateConfiguration(void);
 
     void updateLeftButton();
     void updateRightButton();
@@ -75,7 +79,7 @@ class HMS {
   private:
     BUILDER *builder;
 
-    LiquidCrystal_I2C *lcd;
+    LCD1602 *lcd;
     DS1302 *rtc;
     DHT *dht;
 
@@ -87,15 +91,28 @@ class HMS {
 
     DateTime dateTime;
 
-    float    temperature;
-    float    temperatureDiv;
+    float temperature;
+    float temperatureDiv;
 
-    float    humidity;
-    float    humidityDiv;
+    float humidity;
+    float humidityDiv;
 
-    uint8_t numMenu;
+    float pressure;
+    float pressureDiv;
+
+    uint8_t backlight;
+
+    struct {
+        uint8_t  number;
+        uint32_t displayTime;
+        bool     isCapture;
+
+        uint8_t ptrChgGeneral;
+        uint8_t ptrChgParam;
+    } menu;
+
     TIMER   *timerMenu;
-
+    
     void nextMenu(void);
     void previousMenu(void);
 

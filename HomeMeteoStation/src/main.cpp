@@ -7,7 +7,6 @@ void ISR_rightButton();
 
 void setup() {
     hms.init();
-    hms.enableBacklight(true);
 
     attachInterrupt(0, ISR_leftButton,  CHANGE);
     attachInterrupt(1, ISR_rightButton, CHANGE);
@@ -17,7 +16,12 @@ void loop() {
     hms.updateDateTime();
     hms.updateTemperature();
     hms.updateHumidity();
+    hms.updatePressure();
 
+    hms.updateConfiguration();
+
+    hms.updateBacklight();
+    
     delay(100);
     hms.show();
 }

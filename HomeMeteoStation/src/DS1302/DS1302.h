@@ -27,8 +27,13 @@ public:
     DateTime(uint8_t year, uint8_t mon, uint8_t date, uint8_t hour, uint8_t min, uint8_t sec, Day day);
 
     DateTime& operator=(const DateTime &dateTime);
+
+    friend bool operator==(const DateTime &dt1, const DateTime &dt2);
+    friend bool operator!=(const DateTime &dt1, const DateTime &dt2);
     
-    char *toString();
+    char* toString();
+    char* toStringTime();
+    char* toStringDate();
 };
 
 // An interface to the Dallas Semiconductor DS1302 Real Time Clock (RTC) chip.
