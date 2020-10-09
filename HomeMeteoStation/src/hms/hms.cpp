@@ -7,16 +7,18 @@
 //Serial.println("Test");
 
 HMS::HMS() {
-    this->temperature = 0.0;
-    this->humidity    = 0;
-    
+    this->temperature = {0.0, 0.0};
+    this->humidity    = {0.0, 0.0};
+    this->pressure    = {0.0, 0.0};
+
     this->menu        = {0};
 
-    this->builder     = new BUILDER(0, 0, 3, 0);
+    this->builder     = new BUILDER(2, 0, 0, 0);
 
     this->lcd         = new LCD1602(0x27, 16, 2);
-    this->rtc         = new DS1302(HMS::PIN_DS1302_RST, HMS::PIN_DS1302_DAT, HMS::PIN_DS1302_CLK);
-    this->dht         = new DHT(HMS::PIN_DHT_DAT, DHT11);
+    //this->rtc         = new DS1302(HMS::PIN_DS1302_RST, HMS::PIN_DS1302_DAT, HMS::PIN_DS1302_CLK);
+    this->rtc         = new DS1307();
+    this->bme         = new BME();
 
     this->leftLED     = new LED(HMS::PIN_DIOD_LEFT);
     this->rightLED    = new LED(HMS::PIN_DIOD_RIGHT);
@@ -25,6 +27,7 @@ HMS::HMS() {
     this->rightButton = new BUTTON(HMS::PIN_BUTTON_RIGHT);
 
     this->timerMenu   = new TIMER(this->menu.displayTime = 10000);
+    this->timerMeas   = new TIMER(1000);
 }
 
 HMS::~HMS() {
@@ -32,7 +35,7 @@ HMS::~HMS() {
 
     delete this->lcd;
     delete this->rtc;
-    delete this->dht;
+    delete this->bme;
 
     delete this->leftLED;
     delete this->rightLED;
@@ -40,15 +43,20 @@ HMS::~HMS() {
     delete this->leftButton;
     delete this->rightButton;
 
+    delete this->timerMeas;
     delete this->timerMenu;
 }
 
 void HMS::init() {
     this->lcd->startup();
 
-    this->rtc->writeProtect(false);
-    this->rtc->halt(false);
-    this->dht->begin();
+    if (this->rtc->isRunning()) {
+
+    }
+
+    //this->rtc->writeProtect(false);
+    //this->rtc->halt(false);
+    this->bme->startUp();
 
     DateTime dateTimeBuild = { BUILDER_DATE_TIME_INVERSE, DateTime::DAY_WEDNESDAY };
     uint32_t hash = dateTimeBuild.hour * 60 * 60 + dateTimeBuild.min * 60 + dateTimeBuild.sec;
@@ -68,6 +76,7 @@ void HMS::init() {
     }
 
     delay(500);
+    this->timerMeas->start();
 }
 
 void HMS::show() {
@@ -77,10 +86,10 @@ void HMS::show() {
                 DateTime oldDateTime = this->dateTime;
 
                 if (this->rightButton->state()) {
-                    this->menu.ptrChgGeneral = (this->menu.ptrChgGeneral < 4) ? this->menu.ptrChgGeneral + 1 : 0;
+                    this->menu.ptrChangeGeneral = (this->menu.ptrChangeGeneral < 4) ? this->menu.ptrChangeGeneral + 1 : 0;
                 }
 
-                switch (this->menu.ptrChgGeneral) {
+                switch (this->menu.ptrChangeGeneral) {
                     case 0: {
                         lcd->setCursor(1, 1);
                         if (!this->rightButton->state() && this->leftButton->state()) {
@@ -139,16 +148,16 @@ void HMS::show() {
             lcd->setCursor(0, 0);
 
             // -- Temperature
-            lcd->print(SIGN_FLOAT(this->temperature));
-            lcd->print(abs(this->temperature), 1);
+            lcd->print(SIGN_FLOAT(this->temperature.val));
+            lcd->print(abs(this->temperature.val), 1);
             lcd->print("t ");
 
             // -- Humidity
-            lcd->print((uint8_t)this->humidity);
+            lcd->print((uint8_t)this->humidity.val);
             lcd->print("% ");
 
             // -- Pressure
-            lcd->print((uint16_t)this->pressure);
+            lcd->print((uint16_t)this->pressure.val);
             lcd->print("mH");
             // ---
 
@@ -171,13 +180,13 @@ void HMS::show() {
             lcd->print("  ");
 
             // -- Temperature
-            lcd->print(SIGN_FLOAT(this->temperatureDiv));
-            lcd->print(abs(this->temperatureDiv), 1);
+            lcd->print(SIGN_FLOAT(this->temperature.div));
+            lcd->print(abs(this->temperature.div), 1);
             lcd->print("t ");
 
             // -- Humidity
-            lcd->print(SIGN_FLOAT(this->humidityDiv));
-            lcd->print(abs(this->humidityDiv), 1);
+            lcd->print(SIGN_FLOAT(this->humidity.div));
+            lcd->print(abs(this->humidity.div), 1);
             lcd->print("%   ");
 
             break;
@@ -201,10 +210,10 @@ void HMS::show() {
                     uint32_t oldDisplayTime = this->menu.displayTime;
 
                 if (this->rightButton->state()) {
-                    this->menu.ptrChgParam = (this->menu.ptrChgParam < 1) ? this->menu.ptrChgParam + 1 : 0;
+                    this->menu.ptrChangeParam = (this->menu.ptrChangeParam < 1) ? this->menu.ptrChangeParam + 1 : 0;
                 }
 
-                switch (this->menu.ptrChgParam) {
+                switch (this->menu.ptrChangeParam) {
                     case 0: {
                         lcd->setCursor(13, 0);
                         if (!this->rightButton->state() && this->leftButton->state()) {
@@ -276,65 +285,31 @@ void HMS::show() {
 }
 
 void HMS::updateDateTime() {
-    this->dateTime = this->rtc->getDateTime();
+    this->rtc->getDateTime(this->dateTime);
 }
 
-void HMS::updateTemperature() {
-    const size_t countMeas = 3;
-
-    static size_t it = 0;
-    static float bufferMeas[countMeas];
-
-    float temperature = this->dht->readTemperature();
-
-    if (temperature > 99.0) {
-        temperature = 99.0;
-    }
-
-    if (temperature < -99.0) {
-        temperature = -99.0;
-    }
-
-    bufferMeas[it++] = temperature;
-
-    if (it != countMeas) {
+void HMS::updateMeas() {
+    if (!this->timerMeas->isExpired()) {
         return;
     }
 
-    it = 0;
-    this->temperature = sqrt((pow(bufferMeas[0], 2) + pow(bufferMeas[1], 2) + pow(bufferMeas[2], 2)) / countMeas);
+    this->bme->refresh();
+
+    this->temperature.val = bme->getTemperature();
+    this->humidity.val    = bme->getHumidity();
+    this->pressure.val    = bme->getPressure();
+
     this->checkDivOnNormalTemperature();
-}
-
-void HMS::updateHumidity() {
-    const size_t countMeas = 3;
-
-    static size_t it = 0;
-    static float bufferMeas[countMeas];
-
-    float humidity = this->dht->readHumidity();
-    humidity       = (humidity < 99.0) ? humidity : 99.0;
-
-    bufferMeas[it++] = humidity;
-
-    if (it != countMeas) {
-        return;
-    }
-
-    it = 0;
-    this->humidity = sqrt((pow(bufferMeas[0], 2) + pow(bufferMeas[1], 2) + pow(bufferMeas[2], 2)) / countMeas);
     this->checkDivOnNormalHumidity();
-}
 
-void HMS::updatePressure() {
-    this->pressure = 760.0;
+    this->timerMeas->start();
 }
 
 void HMS::updateBacklight() {
     uint8_t light = this->backlight;
 
     light = map(light, 0, 100, 0, 255);
-    analogWrite(HMS::PIN_BACKLIGHT, light);
+    analogWrite(HMS::PIN_LCD_BACKLIGHT, light);
 }
 
 void HMS::updateConfiguration(void) {
@@ -342,9 +317,9 @@ void HMS::updateConfiguration(void) {
         this->menu.isCapture = !this->menu.isCapture;
 
         if (!this->menu.isCapture) {
-            this->menu.number        = 0;
-            this->menu.ptrChgGeneral = 0;
-            this->menu.ptrChgParam   = 0;
+            this->menu.number           = 0;
+            this->menu.ptrChangeGeneral = 0;
+            this->menu.ptrChangeParam   = 0;
         }
 
         delay(500);
@@ -402,9 +377,9 @@ void HMS::checkDivOnNormalTemperature() {
     static uint32_t countAlarm = HMS_COUNT_ALARM;
 
     float temperatureNormalDiv = (HMS_NORMAL_TEMPERATURE * (float)HMS_NORMAL_DIV_IN_PER_TEMPERATURE) / 100.0;
-    this->temperatureDiv       = this->temperature - HMS_NORMAL_TEMPERATURE;
+    this->temperature.div       = this->temperature.val - HMS_NORMAL_TEMPERATURE;
     
-    if (temperatureNormalDiv < abs(this->temperatureDiv)) {
+    if (temperatureNormalDiv < abs(this->temperature.div )) {
         countDiv = (countDiv) ? (countDiv - 1) : countDiv;
     }
 
@@ -426,9 +401,9 @@ void HMS::checkDivOnNormalHumidity() {
     static uint32_t countAlarm = HMS_COUNT_ALARM;
 
     float humidityNormalDiv = (HMS_NORMAL_HUMIDITY * (float)HMS_NORMAL_DIV_IN_PER_HUMIDITY) / 100.0;
-    this->humidityDiv       = (float)this->humidity - HMS_NORMAL_HUMIDITY;
+    this->humidity.div      = (float)this->humidity.val - HMS_NORMAL_HUMIDITY;
     
-    if (humidityNormalDiv < abs(this->humidityDiv)) {
+    if (humidityNormalDiv < abs(this->humidity.div)) {
         countDiv = (countDiv) ? (countDiv - 1) : countDiv;
     }
 

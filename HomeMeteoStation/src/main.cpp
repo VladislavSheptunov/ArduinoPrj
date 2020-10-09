@@ -14,10 +14,7 @@ void setup() {
 
 void loop() {
     hms.updateDateTime();
-    hms.updateTemperature();
-    hms.updateHumidity();
-    hms.updatePressure();
-
+    hms.updateMeas();
     hms.updateConfiguration();
 
     hms.updateBacklight();
