@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+typedef enum {
+    MEM_INIT_FLAG    = 0x00000000,         // 4 byte
+    MEM_BACKLIGHT    = MEM_INIT_FLAG + 4,  // 1 byte
+    MEM_DISPLAY_TIME = MEM_BACKLIGHT + 1,  // 4 byte
+};
+
 void MEM_readData(uint32_t address, uint8_t *data, uint32_t size);
 void MEM_writeData(uint32_t address, uint8_t *data, uint32_t size);
 

@@ -91,14 +91,30 @@ DateTime::DateTime(const uint8_t year, const uint8_t mon, const uint8_t date,
   this->day  = day;
 }
 
-DateTime& DateTime::operator=(const DateTime &dateTime) {
-  this->year = dateTime.year;
-  this->mon  = dateTime.mon;
-  this->date = dateTime.date;
-  this->hour = dateTime.hour;
-  this->min  = dateTime.min;
-  this->sec  = dateTime.sec;
-  this->day  = dateTime.day;
+DateTime& DateTime::operator=(const DateTime &dt) {
+  this->year = dt.year;
+  this->mon  = dt.mon;
+  this->date = dt.date;
+  this->hour = dt.hour;
+  this->min  = dt.min;
+  this->sec  = dt.sec;
+  this->day  = dt.day;
+}
+
+bool operator==(const DateTime &dt1, const DateTime &dt2) {
+    return (
+         (dt1.year == dt2.year) 
+      && (dt1.mon  == dt2.mon )
+      && (dt1.date == dt2.date)
+      && (dt1.hour == dt2.hour)
+      && (dt1.min  == dt2.min )
+      && (dt1.sec  == dt2.sec )
+      && (dt1.day  == dt2.day )
+    );
+}
+
+bool operator!=(const DateTime &dt1, const DateTime &dt2) {
+    return !(dt1 == dt2);
 }
 
 char * DateTime::toString() {
@@ -133,6 +149,35 @@ char * DateTime::toString() {
   templateStr[20] = 0x30 + (this->year % 10);
 
   return templateStr;
+}
+
+char * DateTime::toStringTime() {
+  static char templateStrTime[] = "hh:mm";
+
+  // In ASCII Code
+  templateStrTime[0]  = 0x30 + (this->hour / 10);
+  templateStrTime[1]  = 0x30 + (this->hour % 10);
+
+  templateStrTime[3]  = 0x30 + (this->min / 10);
+  templateStrTime[4]  = 0x30 + (this->min % 10);
+
+  return templateStrTime;
+}
+
+char * DateTime::toStringDate() {
+  static char templateStrDate[] = "dd.mm.yy";
+
+  // In ASCII Code
+  templateStrDate[0] = 0x30 + (this->date / 10);
+  templateStrDate[1] = 0x30 + (this->date % 10);
+
+  templateStrDate[3] = 0x30 + (this->mon / 10);
+  templateStrDate[4] = 0x30 + (this->mon % 10);
+
+  templateStrDate[6] = 0x30 + (this->year / 10);
+  templateStrDate[7] = 0x30 + (this->year % 10);
+
+  return templateStrDate;
 }
 
 DS1302::DS1302(const uint8_t pinRST, const uint8_t pinDAT, const uint8_t pinCLK) {
